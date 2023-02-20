@@ -124,8 +124,11 @@ void loop() {
 
   // -------------------- Send Bluetooth signal ----------------------
 
+      // Sent data with bluetooth
       send_BT(ID_ML_TOTAL, int(totalMilliLitres));
       send_BT(ID_ML_FLOW, int(flowMilliLitres));
+
+      // Print serial data for debug
       Serial.println(String(totalMilliLitres));
       Serial.println(String(flowMilliLitres) + " flowmililiters");
       Serial.println(pulse1Sec);
