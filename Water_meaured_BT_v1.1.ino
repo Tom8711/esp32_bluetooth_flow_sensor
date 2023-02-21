@@ -17,12 +17,16 @@ int id = -1;                                      // Id to specify the incoming 
 int val_byte1 = -1;                               // Value of the first incoming byte
 int val_byte2 = -1;                               // Value of the second incoming byte
 
+// Bluetooth receiving parameters
+
+int incoming = -1;
+
 // Init variables for calculating the flow from sensor input
 
 long currentMillis = 0;                           // Milliseconds counted at start of measuremend loop
 long previousMillis = 0;                          // Milliseconds counted after flowrate is calculated with pulsecounter
 int interval = 100;                               // Interval of the the time between loops in ms
-int calibrationFactor = 90;                       // Factor to be altered to calibrate sensor
+int calibrationFactor = 9;                       // Factor to be altered to calibrate sensor
 volatile byte pulseCount;                         // Amount of pulsecounts read from the sensor
 byte pulse1Loop = 0;                              // Amount of pulses during one loop
 
@@ -117,7 +121,7 @@ void loop() {
     // Divide the flow rate in litres/minute by 60 to determine how many litres have
     // passed through the sensor in this 100 millisecond interval, then multiply by 1000 to
     // convert to millilitres.
-    flowMilliLitres = (flowRate / 600) * 1000;
+    flowMilliLitres = (flowRate / 60) * 1000;
 
     // Add the millilitres passed in this second to the cumulative total
     totalMilliLitres += flowMilliLitres;
@@ -131,7 +135,6 @@ void loop() {
       // Print serial data for debug
       Serial.println(String(totalMilliLitres));
       Serial.println(String(flowMilliLitres) + " flowmililiters");
-      Serial.println(pulse1Sec);
     
 
   }
