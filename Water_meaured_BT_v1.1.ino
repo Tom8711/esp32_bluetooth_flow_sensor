@@ -13,7 +13,7 @@ BluetoothSerial ESP_BT;
 
 // Bluetooth send parameters
 
-int id = -1;                                      // Id to specify the incoming signal
+int id;
 int val_byte1 = -1;                               // Value of the first incoming byte
 int val_byte2 = -1;                               // Value of the second incoming byte
 
@@ -63,7 +63,10 @@ void send_BT(int id, int value)
   ESP_BT.write(value%239);                        // The second byte (least significant byte) is divided through modulus division by 239
 }
 
-
+int receive_BT_id(int id)
+{
+  return id + 240;
+}
 
 //------INITIAL SETUP------
 
@@ -95,13 +98,36 @@ void loop() {
   {
     incoming = ESP_BT.read();                     // Set received BT data to incoming
 
-    // Check the incoming data for id. Launch the code dependant of the id that is received
-    switch (incoming) 
+    if (incoming > 240)
     {
+      // Check the incoming data for id. Launch the code dependant of the id that is received
+      switch (incoming) 
+      {
       // Id 1: reset totalMilliLitres
-      case 1:
+      case 241:
         Serial.println("Total volume reset");
         totalMilliLitres = 0;
+      // Id 3: Change calibration factor
+      case 243:
+        reset_rx_BT();                            // First all values are reset
+        id = 243;                                 // id is set to the received id
+      }
+    }
+    // Only if the bytes were reset this code will run and sets the bytes to the received value.
+    else if (val_byte1 == -1)                     
+    {
+      val_byte1 = incoming;
+    }
+    else if (val_byte2 == -1)
+    {
+      val_byte2 = incoming;
+      switch (id)
+      {
+        // Check the id and change the calibration factor. The new calibration factor is send back as an extra check.
+        case 243:
+        calibrationFactor = val_byte1*239 + val_byte2;
+        send_BT(3, calibrationFactor);
+      }
     }
   }
 
@@ -135,7 +161,7 @@ void loop() {
       // Print serial data for debug
       Serial.println(String(totalMilliLitres));
       Serial.println(String(flowMilliLitres) + " flowmililiters");
-    
+      Serial.println(calibrationFactor);
 
   }
     
