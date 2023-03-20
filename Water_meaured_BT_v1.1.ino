@@ -26,8 +26,9 @@ int incoming = -1;
 long currentMillis = 0;                           // Milliseconds counted at start of measuremend loop
 long previousMillis = 0;                          // Milliseconds counted after flowrate is calculated with pulsecounter
 int interval = 100;                               // Interval of the the time between loops in ms
-int calibrationFactor = 9;                       // Factor to be altered to calibrate sensor
+int calibrationFactor = 100;                       // Factor to be altered to calibrate sensor
 volatile byte pulseCount;                         // Amount of pulsecounts read from the sensor
+unsigned int calPulseCount = 0;                    // Amount of pulsecounts used for calculating the calibrationfactor after calibration
 byte pulse1Loop = 0;                              // Amount of pulses during one loop
 
 
@@ -68,6 +69,11 @@ int receive_BT_id(int id)
   return id + 240;
 }
 
+int receive_BT_value(int val_1, int val_2)
+{
+  return val_1 * 239 + val_2;
+}
+
 //------INITIAL SETUP------
 
 void setup() {
@@ -97,21 +103,36 @@ void loop() {
   if (ESP_BT.available())
   {
     incoming = ESP_BT.read();                     // Set received BT data to incoming
+    Serial.println(incoming);
 
-    if (incoming > 240)
+    if (incoming > 239)
     {
       // Check the incoming data for id. Launch the code dependant of the id that is received
       switch (incoming) 
       {
+      //id = 244;
+      // Id 0: Just to check if bluetooth connection is pressent
+      case 240:
+        return;
       // Id 1: reset totalMilliLitres
       case 241:
+        reset_rx_BT();
         Serial.println("Total volume reset");
         totalMilliLitres = 0;
+        calPulseCount = 0;
+        break;
       // Id 3: Change calibration factor
       case 243:
-        reset_rx_BT();                            // First all values are reset
-        id = 243;                                 // id is set to the received id
+        reset_rx_BT();
+        id = 243;
+        break;
+      // Id 4: Receive volume for calibration and to determine calibration factor
+      case 244:
+        reset_rx_BT();
+        id = 244;
+        break;
       }
+
     }
     // Only if the bytes were reset this code will run and sets the bytes to the received value.
     else if (val_byte1 == -1)                     
@@ -127,6 +148,12 @@ void loop() {
         case 243:
         calibrationFactor = val_byte1*239 + val_byte2;
         send_BT(3, calibrationFactor);
+        break;
+        // Check the id and change the calibration factor with the number of pulses measured and the corresponding volume
+        case 244:
+        calibrationFactor = 10 * calPulseCount / receive_BT_value(val_byte1, val_byte2);
+        send_BT(3, calibrationFactor);
+        break;
       }
     }
   }
@@ -138,16 +165,17 @@ void loop() {
   // Start the measurement when the time since the last measurement is greater than the specified intervall
   if (currentMillis - previousMillis > interval) 
   {
+    calPulseCount += pulse1Loop;
     pulse1Loop = pulseCount;                                                                   // The pulses measured during the last loop
     pulseCount = 0;                                                                            // Reset pulseCount at the start of the measurement
   
-    flowRate = ((1000 / (millis() - previousMillis)) * pulse1Loop) / calibrationFactor;        // Calculate the flowrate by dividing the (time of one loop times the number of pulses) with the determined calibration factor
+    flowRate = ((1000 / (float(millis() - previousMillis))) * float(pulse1Loop)) / float(calibrationFactor);        // Calculate the flowrate by dividing the (time of one loop times the number of pulses) with the determined calibration factor
     previousMillis = millis();                                                                 // Time after the calculation, used to determine if enough time has passed since last loop
 
     // Divide the flow rate in litres/minute by 60 to determine how many litres have
     // passed through the sensor in this 100 millisecond interval, then multiply by 1000 to
     // convert to millilitres.
-    flowMilliLitres = (flowRate / 60) * 1000;
+    flowMilliLitres = flowRate;
 
     // Add the millilitres passed in this second to the cumulative total
     totalMilliLitres += flowMilliLitres;
@@ -156,12 +184,13 @@ void loop() {
 
       // Sent data with bluetooth
       send_BT(ID_ML_TOTAL, int(totalMilliLitres));
-      send_BT(ID_ML_FLOW, int(flowMilliLitres));
+      send_BT(ID_ML_FLOW, int(flowMilliLitres * 100));
 
       // Print serial data for debug
       Serial.println(String(totalMilliLitres));
       Serial.println(String(flowMilliLitres) + " flowmililiters");
       Serial.println(calibrationFactor);
+      Serial.println(calPulseCount);
 
   }
     
