@@ -26,7 +26,7 @@ int incoming = -1;
 long currentMillis = 0;                           // Milliseconds counted at start of measuremend loop
 long previousMillis = 0;                          // Milliseconds counted after flowrate is calculated with pulsecounter
 int interval = 100;                               // Interval of the the time between loops in ms
-int calibrationFactor = 100;                       // Factor to be altered to calibrate sensor
+float calibrationFactor = 100;                       // Factor to be altered to calibrate sensor
 volatile byte pulseCount;                         // Amount of pulsecounts read from the sensor
 unsigned int calPulseCount = 0;                    // Amount of pulsecounts used for calculating the calibrationfactor after calibration
 byte pulse1Loop = 0;                              // Amount of pulses during one loop
@@ -169,7 +169,7 @@ void loop() {
     pulse1Loop = pulseCount;                                                                   // The pulses measured during the last loop
     pulseCount = 0;                                                                            // Reset pulseCount at the start of the measurement
   
-    flowRate = ((1000 / (float(millis() - previousMillis))) * float(pulse1Loop)) / float(calibrationFactor);        // Calculate the flowrate by dividing the (time of one loop times the number of pulses) with the determined calibration factor
+    flowRate = ((1000 / (float(millis() - previousMillis))) * float(pulse1Loop)) / calibrationFactor;        // Calculate the flowrate by dividing the (time of one loop times the number of pulses) with the determined calibration factor
     previousMillis = millis();                                                                 // Time after the calculation, used to determine if enough time has passed since last loop
 
     // Divide the flow rate in litres/minute by 60 to determine how many litres have
@@ -184,7 +184,7 @@ void loop() {
 
       // Sent data with bluetooth
       send_BT(ID_ML_TOTAL, int(totalMilliLitres));
-      send_BT(ID_ML_FLOW, int(flowMilliLitres * 100));
+      send_BT(ID_ML_FLOW, int(flowMilliLitres * 10));
 
       // Print serial data for debug
       Serial.println(String(totalMilliLitres));
