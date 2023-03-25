@@ -151,7 +151,7 @@ void loop() {
         break;
         // Check the id and change the calibration factor with the number of pulses measured and the corresponding volume
         case 244:
-        calibrationFactor = 10 * calPulseCount / receive_BT_value(val_byte1, val_byte2);
+        calibrationFactor = 1000 * calPulseCount / receive_BT_value(val_byte1, val_byte2);
         send_BT(3, calibrationFactor);
         break;
       }
